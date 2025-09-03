@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Compressor</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="text-center mb-4">PDF Compressor</h1>
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <form id="compressForm" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label for="pdfInput" class="form-label">Select PDF files:</label>
+            <input type="file" class="form-control" id="pdfInput" name="pdfs" accept=".pdf" multiple required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Compress PDFs</button>
+        </form>
+        <div id="compressResult" class="mt-4" style="display: none;">
+          <h3>Compressed Files:</h3>
+          <ul id="fileList" class="list-group"></ul>
+        </div>
+        <div class="mt-3">
+          <a href="/" class="btn btn-secondary">Back to QR Code Generator</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.getElementById('compressForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      const files = document.getElementById('pdfInput').files;
+      
+      for (let i = 0; i < files.length; i++) {
+        formData.append('pdfs', files[i]);
+      }
+      
+      const response = await fetch('/compress-pdf', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        const fileList = document.getElementById('fileList');
+        fileList.innerHTML = '';
+        data.compressedFiles.forEach(file => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
+          li.innerHTML = `
+            ${file.originalName}
+            <a href="${file.downloadUrl}" class="btn btn-sm btn-success" download>Download</a>
+          `;
+          fileList.appendChild(li);
+        });
+        document.getElementById('compressResult').style.display = 'block';
+      } else {
+        alert(data.error);
+      }
+    });
+  </script>
+</body>
+</html>
