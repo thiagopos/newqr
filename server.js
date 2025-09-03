@@ -4,6 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const { exec } = require('child_process');
+const archiver = require('archiver');
 
 const app = express();
 const PORT = 3000;
@@ -34,7 +35,7 @@ app.get('/compress', (req, res) => {
 app.post('/generate-qr', async (req, res) => {
   const { url } = req.body;
   if (!url) {
-    return res.status(400).json({ error: 'URL is required' });
+    return res.status(400).json({ error: 'URL é obrigatória' });
   }
 
   try {
@@ -42,14 +43,14 @@ app.post('/generate-qr', async (req, res) => {
     const qrCodeDataURL = await QRCode.toDataURL(url);
     res.json({ qrCode: qrCodeDataURL });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate QR code' });
+    res.status(500).json({ error: 'Falha ao gerar QR code' });
   }
 });
 
 // Route to compress PDFs
 app.post('/compress-pdf', upload.array('pdfs'), (req, res) => {
   if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ error: 'No PDF files uploaded' });
+    return res.status(400).json({ error: 'Nenhum arquivo PDF enviado' });
   }
 
   const compressedFiles = [];
@@ -57,7 +58,9 @@ app.post('/compress-pdf', upload.array('pdfs'), (req, res) => {
 
   req.files.forEach((file, index) => {
     const inputPath = file.path;
-    const outputPath = path.join('uploads', `compressed_${file.originalname}`);
+    const baseName = path.parse(file.originalname).name;
+    const ext = path.parse(file.originalname).ext;
+    const outputPath = path.join('uploads', `${baseName}_comp${ext}`);
     
     // Ghostscript command for compression
     const gsCommand = `"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe" -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH -sOutputFile="${outputPath}" "${inputPath}"`;
@@ -72,19 +75,46 @@ app.post('/compress-pdf', upload.array('pdfs'), (req, res) => {
       } else {
         compressedFiles.push({
           originalName: file.originalname,
-          compressedName: `compressed_${file.originalname}`,
-          downloadUrl: `/download/${encodeURIComponent(`compressed_${file.originalname}`)}`
+          compressedName: `${baseName}_comp${ext}`,
+          path: outputPath
         });
         // Clean up original
         fs.unlinkSync(inputPath);
       }
       
-      // Send response when all files are processed
+      // When all files are processed, create ZIP
       if (processed === req.files.length) {
         if (compressedFiles.length === 0) {
-          return res.status(500).json({ error: 'Failed to compress any PDFs. Make sure Ghostscript is installed.' });
+          return res.status(500).json({ error: 'Falha ao comprimir PDFs. Certifique-se de que o Ghostscript está instalado.' });
         }
-        res.json({ compressedFiles });
+        
+        const zipName = `pdfs_comp_${Date.now()}.zip`;
+        const zipPath = path.join('uploads', zipName);
+        const output = fs.createWriteStream(zipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        
+        output.on('close', () => {
+          // Clean up compressed files
+          compressedFiles.forEach(f => fs.unlinkSync(f.path));
+          
+          res.json({ 
+            zipFile: zipName,
+            downloadUrl: `/download/${encodeURIComponent(zipName)}`,
+            fileCount: compressedFiles.length
+          });
+        });
+        
+        archive.on('error', (err) => {
+          throw err;
+        });
+        
+        archive.pipe(output);
+        
+        compressedFiles.forEach(f => {
+          archive.file(f.path, { name: f.compressedName });
+        });
+        
+        archive.finalize();
       }
     });
   });
@@ -110,5 +140,5 @@ app.get('/download/:filename', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
