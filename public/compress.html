@@ -20,9 +20,9 @@
           <button type="submit" class="btn btn-primary w-100">Comprimir PDFs</button>
         </form>
         <div id="compressResult" class="mt-4" style="display: none;">
-          <h3>Arquivos Comprimidos Prontos!</h3>
+          <h3 id="resultTitle">Arquivos Comprimidos Prontos!</h3>
           <p id="fileCount"></p>
-          <a id="downloadLink" href="" class="btn btn-success" download>Baixar ZIP</a>
+          <a id="downloadLink" href="" class="btn btn-success" download>Baixar</a>
         </div>
         <div class="mt-3">
           <a href="/" class="btn btn-secondary">Voltar ao Gerador de QR Code</a>
@@ -50,8 +50,19 @@
       
       const data = await response.json();
       if (response.ok) {
+        const resultTitle = document.getElementById('resultTitle');
+        const downloadLink = document.getElementById('downloadLink');
+        
+        if (data.fileCount === 1) {
+          resultTitle.textContent = 'Arquivo Comprimido Pronto!';
+          downloadLink.textContent = 'Baixar PDF';
+        } else {
+          resultTitle.textContent = 'Arquivos Comprimidos Prontos!';
+          downloadLink.textContent = 'Baixar ZIP';
+        }
+        
         document.getElementById('fileCount').textContent = `${data.fileCount} PDF(s) comprimido(s) com sucesso.`;
-        document.getElementById('downloadLink').href = data.downloadUrl;
+        downloadLink.href = data.downloadUrl;
         document.getElementById('compressResult').style.display = 'block';
       } else {
         alert(data.error);

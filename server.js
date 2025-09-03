@@ -82,39 +82,50 @@ app.post('/compress-pdf', upload.array('pdfs'), (req, res) => {
         fs.unlinkSync(inputPath);
       }
       
-      // When all files are processed, create ZIP
+      // When all files are processed, create ZIP or return single file
       if (processed === req.files.length) {
         if (compressedFiles.length === 0) {
           return res.status(500).json({ error: 'Falha ao comprimir PDFs. Certifique-se de que o Ghostscript está instalado.' });
         }
         
-        const zipName = `pdfs_comp_${Date.now()}.zip`;
-        const zipPath = path.join('uploads', zipName);
-        const output = fs.createWriteStream(zipPath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
-        
-        output.on('close', () => {
-          // Clean up compressed files
-          compressedFiles.forEach(f => fs.unlinkSync(f.path));
-          
+        if (compressedFiles.length === 1) {
+          // Return single compressed PDF
+          const file = compressedFiles[0];
           res.json({ 
-            zipFile: zipName,
-            downloadUrl: `/download/${encodeURIComponent(zipName)}`,
-            fileCount: compressedFiles.length
+            fileName: file.compressedName,
+            downloadUrl: `/download/${encodeURIComponent(file.compressedName)}`,
+            fileCount: 1
           });
-        });
-        
-        archive.on('error', (err) => {
-          throw err;
-        });
-        
-        archive.pipe(output);
-        
-        compressedFiles.forEach(f => {
-          archive.file(f.path, { name: f.compressedName });
-        });
-        
-        archive.finalize();
+        } else {
+          // Create ZIP for multiple files
+          const zipName = `pdfs_comp_${Date.now()}.zip`;
+          const zipPath = path.join('uploads', zipName);
+          const output = fs.createWriteStream(zipPath);
+          const archive = archiver('zip', { zlib: { level: 9 } });
+          
+          output.on('close', () => {
+            // Clean up compressed files
+            compressedFiles.forEach(f => fs.unlinkSync(f.path));
+            
+            res.json({ 
+              zipFile: zipName,
+              downloadUrl: `/download/${encodeURIComponent(zipName)}`,
+              fileCount: compressedFiles.length
+            });
+          });
+          
+          archive.on('error', (err) => {
+            throw err;
+          });
+          
+          archive.pipe(output);
+          
+          compressedFiles.forEach(f => {
+            archive.file(f.path, { name: f.compressedName });
+          });
+          
+          archive.finalize();
+        }
       }
     });
   });
