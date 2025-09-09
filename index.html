@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Love - Gerador de QR Code</title>
+    <script src="qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --border-radius: 10px;
+            --box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+        }
+
+        .radio-option input {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .qr-code-container {
+            display: none;
+            margin-top: 30px;
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: var(--border-radius);
+        }
+
+        .qr-code-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        #qrcode {
+            margin: 20px auto;
+            max-width: 100%;
+        }
+
+        #qrcode svg, #qrcode img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .download-btn {
+            background-color: #28a745;
+            margin-top: 20px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .col {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QR Code Love</h1>
+        
+        <div class="form-group">
+            <label for="url">URL:</label>
+            <input type="url" id="url" placeholder="https://exemplo.com" required>
+            <div class="error-message" id="url-error">Por favor, insira uma URL válida.</div>
+        </div>
+        
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label>Formato:</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="png" name="format" value="png" checked>
+                            <label for="png">PNG</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="svg" name="format" value="svg">
+                            <label for="svg">SVG</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col">
+                <div class="form-group">
+                    <label for="errorCorrection">Nível de correção de erro:</label>
+                    <select id="errorCorrection">
+                        <option value="L">Baixo (L - 7%)</option>
+                        <option value="M" selected>Médio (M - 15%)</option>
+                        <option value="Q">Alto (Q - 25%)</option>
+                        <option value="H">Muito alto (H - 30%)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label for="size">Tamanho (pixels):</label>
+                    <input type="number" id="size" value="300" min="100" max="1000">
+                </div>
+            </div>
+            
+            <div class="col">
+                <div class="form-group">
+                    <label for="margin">Margem (pixels):</label>
+                    <input type="number" id="margin" value="4" min="0" max="50">
+                </div>
+            </div>
+        </div>
+        
+        <button id="generate-btn">Gerar QR Code</button>
+        
+        <div class="qr-code-container" id="qr-container">
+            <h2>QR Code gerado</h2>
+            <div id="qrcode"></div>
+            <button id="download-btn" class="download-btn">Download</button>
+        </div>
+    </div>
+    
+    <footer>
+        © 2025 QR Code Love | Gerador de QR Code
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlInput = document.getElementById('url');
+            const formatRadios = document.querySelectorAll('input[name="format"]');
+            const errorCorrectionSelect = document.getElementById('errorCorrection');
+            const sizeInput = document.getElementById('size');
+            const marginInput = document.getElementById('margin');
+            const generateBtn = document.getElementById('generate-btn');
+            const qrContainer = document.getElementById('qr-container');
+            const qrcodeElement = document.getElementById('qrcode');
+            const downloadBtn = document.getElementById('download-btn');
+            const urlError = document.getElementById('url-error');
+            
+            let qrCodeData = null;
+            
+            // Função para validar URL
+            function isValidURL(url) {
+                try {
+                    new URL(url);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+            
+            // Função para gerar QR Code
+            function generateQRCode() {
+                const url = urlInput.value.trim();
+                
+                // Validar URL
+                if (!isValidURL(url)) {
+                    urlError.style.display = 'block';
+                    return;
+                }
+                
+                urlError.style.display = 'none';
+                
+                // Limpar QR code anterior
+                qrcodeElement.innerHTML = '';
+                
+                // Obter configurações
+                const format = document.querySelector('input[name="format"]:checked').value;
+                const errorCorrection = errorCorrectionSelect.value;
+                const size = parseInt(sizeInput.value);
+                const margin = parseInt(marginInput.value);
+                
+                // Opções do QR Code
+                const options = {
+                    errorCorrectionLevel: errorCorrection,
+                    margin: margin,
+                    width: size,
+                    height: size,
+                };
+                
+                // Gerar QR Code baseado no formato selecionado
+                if (format === 'svg') {
+                    QRCode.toString(url, {
+                        ...options,
+                        type: 'svg'
+                    }, function(error, svgString) {
+                        if (error) {
+                            console.error('Erro ao gerar QR Code SVG:', error);
+                            return;
+                        }
+                        
+                        qrcodeElement.innerHTML = svgString;
+                        qrCodeData = svgString;
+                        qrContainer.classList.add('active');
+                    });
+                } else {
+                    QRCode.toDataURL(url, options, function(error, dataURL) {
+                        if (error) {
+                            console.error('Erro ao gerar QR Code PNG:', error);
+                            return;
+                        }
+                        
+                        const img = document.createElement('img');
+                        img.src = dataURL;
+                        img.alt = 'QR Code';
+                        qrcodeElement.innerHTML = '';
+                        qrcodeElement.appendChild(img);
+                        qrCodeData = dataURL;
+                        qrContainer.classList.add('active');
+                    });
+                }
+            }
+            
+            // Download de QR Code
+            function downloadQRCode() {
+                if (!qrCodeData) return;
+                
+                const format = document.querySelector('input[name="format"]:checked').value;
+                const fileName = `qrcode_${new Date().toISOString().slice(0, 10)}.${format}`;
+                
+                const link = document.createElement('a');
+                
+                if (format === 'svg') {
+                    const blob = new Blob([qrCodeData], { type: 'image/svg+xml' });
+                    link.href = URL.createObjectURL(blob);
+                } else {
+                    link.href = qrCodeData;
+                }
+                
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            // Event listeners
+            generateBtn.addEventListener('click', generateQRCode);
+            downloadBtn.addEventListener('click', downloadQRCode);
+            
+            // Validação de entrada
+            sizeInput.addEventListener('change', function() {
+                if (this.value < 100) this.value = 100;
+                if (this.value > 1000) this.value = 1000;
+            });
+            
+            marginInput.addEventListener('change', function() {
+                if (this.value < 0) this.value = 0;
+                if (this.value > 50) this.value = 50;
+            });
+        });
+    </script>
+</body>
+</html>
